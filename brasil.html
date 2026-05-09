@@ -687,15 +687,15 @@ function showBrtFields(sub){
   document.getElementById('vextRow').classList.remove('hidden');
   if(sub==='PROGRAMA'){
     show('programaSection'); show('apresentadorSection'); show('horarioEmissoraDataRow');
-    show('emissoraSection');
+    show('emissoraSection'); show('tempoSection');
     document.getElementById('programaLabel').textContent='Programa';
   } else if(sub==='REUNIAO'){
     show('diaSemanaSection'); show('pastorSection'); show('cameraSection');
-    show('horarioSection'); show('dataSection');
+    show('horarioSection'); show('dataSection'); show('tempoSection');
     document.getElementById('pastorLabel').textContent='Nome do Pastor';
     document.getElementById('horarioLabel').innerHTML='Horário';
   } else if(sub==='GE'){
-    show('programaSection'); show('temaSection'); show('dataSection');
+    show('programaSection'); show('temaSection'); show('dataSection'); show('tempoSection');
     document.getElementById('programaLabel').textContent='Programa';
   }
 }
@@ -848,6 +848,7 @@ function buildNomenclatura(){
       const h=getHorario('horarioHH','horarioMM'); if(h)parts.push(h);
       if(state.emissora)parts.push(state.emissora);
       const d=getData(false); if(d===null)return null; if(d)parts.push(d);
+      const tempo=getTempo(); if(tempo)parts.push(tempo);
     }
     else if(state.brtSubtype==='REUNIAO'){
       if(!state.diaSemana)return null;
@@ -858,12 +859,14 @@ function buildNomenclatura(){
       const h=getHorario('horarioHH2','horarioMM2'); if(!h)return null;
       const d=getData(true); if(d===null)return null;
       parts.push('REU',dia,pastor,state.camera,h); if(d)parts.push(d);
+      const tempoReu=getTempo(); if(tempoReu)parts.push(tempoReu);
     }
     else if(state.brtSubtype==='GE'){
       const pgm=getPgm(); if(!pgm)return null;
       const tema=normalize(document.getElementById('temaInput').value.trim()); if(!tema)return null;
       const d=getData(true); if(d===null)return null;
       parts.push('GE',pgm,tema); if(d)parts.push(d);
+      const tempoGe=getTempo(); if(tempoGe)parts.push(tempoGe);
     }
 
     if(state.versao)parts.push(state.versao);
@@ -880,7 +883,7 @@ function buildNomenclatura(){
       const pgm=getPgm(); if(!pgm)return null;
       const pastLoc=normalize(document.getElementById('pastorLocalInput').value.trim());
       const d=getDataPGM(); if(d===null)return null;
-      const tempo=normalize(document.getElementById('tempoInput').value.trim()); if(!tempo)return null;
+      const tempo=getTempo(); if(!tempo)return null;
       const parts=['EDT','PGM',h,pgm];
       if(pastLoc)parts.push(pastLoc);
       if(d)parts.push(d);
@@ -897,7 +900,7 @@ function buildNomenclatura(){
       const reu=getReuniao(); if(!reu)return null;
       const cont=normalize(document.getElementById('conteudoInput').value.trim()); if(!cont)return null;
       const d=getData(true); if(d===null)return null;
-      const tempo=normalize(document.getElementById('tempoInput').value.trim()); if(!tempo)return null;
+      const tempo=getTempo(); if(!tempo)return null;
       const prefix=`EDT_${state.edtSubtype}-${cod}`;
       const parts=[prefix,reu,cont];
       if(d)parts.push(d);
@@ -914,7 +917,7 @@ function buildNomenclatura(){
       const nome=normalize(document.getElementById('pessoaInput').value.trim()); if(!nome)return null;
       const cont=normalize(document.getElementById('conteudoInput').value.trim()); if(!cont)return null;
       const d=getData(true); if(d===null)return null;
-      const tempo=normalize(document.getElementById('tempoInput').value.trim()); if(!tempo)return null;
+      const tempo=getTempo(); if(!tempo)return null;
       const parts=[`EDT_TEST-${cod}`,tipo,reu,nome,cont];
       if(d)parts.push(d); parts.push(tempo);
       if(state.versao)parts.push(state.versao); if(state.gc)parts.push(state.gc);
@@ -926,7 +929,7 @@ function buildNomenclatura(){
       const quadro=normalize(document.getElementById('quadroInput').value.trim()); if(!quadro)return null;
       const nome=normalize(document.getElementById('pessoaInput').value.trim()); if(!nome)return null;
       const d=getData(true); if(d===null)return null;
-      const tempo=normalize(document.getElementById('tempoInput').value.trim()); if(!tempo)return null;
+      const tempo=getTempo(); if(!tempo)return null;
       const parts=[`EDT_TEST-${cod}`,quadro,nome];
       if(d)parts.push(d); parts.push(tempo);
       if(state.versao)parts.push(state.versao); if(state.gc)parts.push(state.gc);
@@ -941,7 +944,7 @@ function buildNomenclatura(){
       const test=normalize(document.getElementById('pessoaInput').value.trim()); if(!test)return null;
       const cont=normalize(document.getElementById('conteudoInput').value.trim()); if(!cont)return null;
       const d=getData(true); if(d===null)return null;
-      const tempo=normalize(document.getElementById('tempoInput').value.trim()); if(!tempo)return null;
+      const tempo=getTempo(); if(!tempo)return null;
       const parts=[`EDT_TEST-${cod}`,'ALTAR',reu];
       if(h)parts.push(h); if(pastor)parts.push(pastor);
       parts.push(test,cont); if(d)parts.push(d); parts.push(tempo);
@@ -1015,7 +1018,9 @@ function captureState(){
     quadro:      document.getElementById('quadroInput').value,
     pessoa:      document.getElementById('pessoaInput').value,
     pastorLocal: document.getElementById('pastorLocalInput').value,
-    tempo:       document.getElementById('tempoInput').value,
+    tempo:       document.getElementById('tempoMM').value+':'+document.getElementById('tempoSS').value,
+    tempoMM:     document.getElementById('tempoMM').value,
+    tempoSS:     document.getElementById('tempoSS').value,
     horarioHH:   document.getElementById('horarioHH').value,
     horarioMM:   document.getElementById('horarioMM').value,
     horarioHH2:  document.getElementById('horarioHH2').value,
@@ -1052,7 +1057,11 @@ function restoreState(snap){
   setV('conteudoInput',snap.conteudo); setV('temaInput',snap.tema);
   setV('codInput',snap.cod); setV('tipoProdInput',snap.tipoProd);
   setV('quadroInput',snap.quadro); setV('pessoaInput',snap.pessoa);
-  setV('pastorLocalInput',snap.pastorLocal); setV('tempoInput',snap.tempo);
+  setV('pastorLocalInput',snap.pastorLocal);
+  if(snap.tempoMM)document.getElementById('tempoMM').value=snap.tempoMM;
+  if(snap.tempoSS)document.getElementById('tempoSS').value=snap.tempoSS;
+  const tp=document.getElementById('tempoPreview');
+  if(tp){const t=getTempo();tp.textContent=t?'→ '+t:'';}
   setV('horarioHH',snap.horarioHH); setV('horarioMM',snap.horarioMM);
   setV('horarioHH2',snap.horarioHH2); setV('horarioMM2',snap.horarioMM2);
   setV('dataDD',snap.dataDD); setV('dataMM',snap.dataMM); setV('dataAA',snap.dataAA);
